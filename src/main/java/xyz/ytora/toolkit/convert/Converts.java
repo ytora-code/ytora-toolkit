@@ -1,0 +1,47 @@
+package xyz.ytora.toolkit.convert;
+
+import xyz.ytora.toolkit.convert.support.DefaultConversionService;
+
+/**
+ * created by yangtong on 2025/4/4 下午5:58
+ * <类型转换工具类/>
+ */
+public final class Converts {
+
+    private static final DefaultConversionService conversionService;
+
+    static {
+        String basePackage = Converts.class.getPackage().getName() + ".converters";
+        conversionService = DefaultConversionService.init(basePackage);
+    }
+
+    public static DefaultConversionService get() {
+        return conversionService;
+    }
+
+    /**
+     * 将原数据转为目标类型
+     */
+    public static <T> T convert(Object source, Class<T> targetType) {
+        return conversionService.convert(source, targetType);
+    }
+
+    /**
+     * 将原数据转为目标类型，转换失败则返回默认值
+     */
+    public static <T> T convert(Object source, Class<T> targetType, T defaultValue) {
+        try {
+            T result = convert(source, targetType);
+            if (result == null) {
+                return defaultValue;
+            }
+            return result;
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    private Converts() {
+        throw new AssertionError("不允许实例化工具类");
+    }
+}
