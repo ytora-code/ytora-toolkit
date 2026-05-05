@@ -9,5 +9,5 @@ package xyz.ytora.toolkit.time.cron;
  * @since 1.0
  */
 public class CronTypeException extends RuntimeException {
-
+    private static final long serialVersionUID = 114514;
 }
