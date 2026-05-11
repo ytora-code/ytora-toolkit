@@ -14,7 +14,8 @@ import java.util.Map;
  *
  * <p>使用方法：</p>
  * <p>1. 构建引擎并按需注册自定义函数。</p>
- * <p>2. 调用 {@link #render(String, Object)} 或 {@link #compile(String)} 即可。</p>
+ * <p>2. 按需调用 {@link #render(String, Object)}、{@link #renderSql(String, Object)}
+ * 或对应的 compile 方法即可。</p>
  *
  * <pre>{@code
  * YtoraDslEngine engine = YtoraDslEngine.builder()
@@ -65,13 +66,26 @@ public final class YtoraDslEngine {
         return compile(template).render(context);
     }
 
+    public SqlRenderResult renderSql(String template, Object context) {
+        return compileSql(template).render(context);
+    }
+
     public String render(String template, Map<String, Object> context) {
         return render(template, (Object) context);
+    }
+
+    public SqlRenderResult renderSql(String template, Map<String, Object> context) {
+        return renderSql(template, (Object) context);
     }
 
     public CompiledTemplate compile(String template) {
         TemplateNode root = templateParser.parse(template);
         return new CompiledTemplate(root, functionRegistry, accessMode);
+    }
+
+    public CompiledSqlTemplate compileSql(String template) {
+        TemplateNode root = templateParser.parse(template);
+        return new CompiledSqlTemplate(root, functionRegistry, accessMode);
     }
 
     public FunctionRegistry functionRegistry() {

@@ -7,7 +7,6 @@ import xyz.ytora.toolkit.text.dsl.expression.Expression;
 import xyz.ytora.toolkit.text.dsl.expression.ExpressionParser;
 import xyz.ytora.toolkit.text.dsl.function.FunctionRegistry;
 import xyz.ytora.toolkit.text.dsl.runtime.AccessMode;
-import xyz.ytora.toolkit.text.dsl.runtime.EvaluationContext;
 import xyz.ytora.toolkit.text.dsl.runtime.ValueSupport;
 import xyz.ytora.toolkit.text.dsl.support.DslReservedNames;
 import xyz.ytora.toolkit.text.dsl.support.ErrorMessageSupport;
@@ -360,9 +359,9 @@ public final class TemplateParser {
         }
 
         @Override
-        public void render(EvaluationContext context, StringBuilder output) {
+        public void render(TemplateRenderContext context) {
             for (TemplateNode node : nodes) {
-                node.render(context, output);
+                node.render(context);
             }
         }
     }
@@ -371,7 +370,7 @@ public final class TemplateParser {
         private static final EmptyNode INSTANCE = new EmptyNode();
 
         @Override
-        public void render(EvaluationContext context, StringBuilder output) {
+        public void render(TemplateRenderContext context) {
         }
     }
 
@@ -383,8 +382,8 @@ public final class TemplateParser {
         }
 
         @Override
-        public void render(EvaluationContext context, StringBuilder output) {
-            output.append(text);
+        public void render(TemplateRenderContext context) {
+            context.appendText(text);
         }
     }
 
@@ -396,8 +395,8 @@ public final class TemplateParser {
         }
 
         @Override
-        public void render(EvaluationContext context, StringBuilder output) {
-            output.append(ValueSupport.stringifyRenderValue(expression.evaluate(context)));
+        public void render(TemplateRenderContext context) {
+            context.appendValue(expression.evaluate(context.evaluationContext()));
         }
     }
 
@@ -413,12 +412,12 @@ public final class TemplateParser {
         }
 
         @Override
-        public void render(EvaluationContext context, StringBuilder output) {
-            EvaluationContext child = context.childScope();
-            if (ValueSupport.isTruthy(condition.evaluate(child))) {
-                ifBody.render(child, output);
+        public void render(TemplateRenderContext context) {
+            TemplateRenderContext child = context.childScope();
+            if (ValueSupport.isTruthy(condition.evaluate(child.evaluationContext()))) {
+                ifBody.render(child);
             } else {
-                elseBody.render(child, output);
+                elseBody.render(child);
             }
         }
     }
@@ -435,15 +434,15 @@ public final class TemplateParser {
         }
 
         @Override
-        public void render(EvaluationContext context, StringBuilder output) {
-            List<Object> values = ValueSupport.requireSequence(source.evaluate(context), "for 的数据源必须是数组");
+        public void render(TemplateRenderContext context) {
+            List<Object> values = ValueSupport.requireSequence(source.evaluate(context.evaluationContext()), "for 的数据源必须是数组");
             for (int i = 0; i < values.size(); i++) {
-                EvaluationContext loopScope = context.loopScope(i, values.get(i));
-                if (predicate != null && !ValueSupport.isTruthy(predicate.evaluate(loopScope))) {
+                TemplateRenderContext loopScope = context.loopScope(i, values.get(i));
+                if (predicate != null && !ValueSupport.isTruthy(predicate.evaluate(loopScope.evaluationContext()))) {
                     continue;
                 }
                 try {
-                    body.render(loopScope, output);
+                    body.render(loopScope);
                 } catch (ContinueSignal ignored) {
                     continue;
                 } catch (BreakSignal ignored) {
@@ -465,16 +464,16 @@ public final class TemplateParser {
         }
 
         @Override
-        public void render(EvaluationContext context, StringBuilder output) {
-            Object targetValue = target.evaluate(context);
-            EvaluationContext child = context.childScope();
+        public void render(TemplateRenderContext context) {
+            Object targetValue = target.evaluate(context.evaluationContext());
+            TemplateRenderContext child = context.childScope();
             for (WhenBranch branch : branches) {
-                if (ValueSupport.equalsValue(targetValue, branch.condition.evaluate(child))) {
-                    branch.body.render(child, output);
+                if (ValueSupport.equalsValue(targetValue, branch.condition.evaluate(child.evaluationContext()))) {
+                    branch.body.render(child);
                     return;
                 }
             }
-            defaultBody.render(child, output);
+            defaultBody.render(child);
         }
     }
 
@@ -498,8 +497,8 @@ public final class TemplateParser {
         }
 
         @Override
-        public void render(EvaluationContext context, StringBuilder output) {
-            context.setLocal(name, expression.evaluate(context));
+        public void render(TemplateRenderContext context) {
+            context.evaluationContext().setLocal(name, expression.evaluate(context.evaluationContext()));
         }
     }
 
@@ -507,8 +506,8 @@ public final class TemplateParser {
         private static final ContinueNode INSTANCE = new ContinueNode();
 
         @Override
-        public void render(EvaluationContext context, StringBuilder output) {
-            context.ensureInsideLoop("continue");
+        public void render(TemplateRenderContext context) {
+            context.evaluationContext().ensureInsideLoop("continue");
             throw ContinueSignal.INSTANCE;
         }
     }
@@ -517,8 +516,8 @@ public final class TemplateParser {
         private static final BreakNode INSTANCE = new BreakNode();
 
         @Override
-        public void render(EvaluationContext context, StringBuilder output) {
-            context.ensureInsideLoop("break");
+        public void render(TemplateRenderContext context) {
+            context.evaluationContext().ensureInsideLoop("break");
             throw BreakSignal.INSTANCE;
         }
     }

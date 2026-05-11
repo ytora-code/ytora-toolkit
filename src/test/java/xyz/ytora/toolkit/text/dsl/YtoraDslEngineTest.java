@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import xyz.ytora.toolkit.text.dsl.function.DslFunction;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -75,5 +76,34 @@ public class YtoraDslEngineTest {
         context.put("name", "ytora");
 
         assertEquals("YTORA", engine.render("#{upper(name)}", context));
+    }
+
+    @Test
+    public void shouldRenderSqlWithOrderedParameters() {
+        String template =
+                "select * from user where name = #{name} and age >= #{age} and enabled = #{enabled}";
+
+        Map<String, Object> context = new HashMap<String, Object>();
+        context.put("enabled", Boolean.TRUE);
+        context.put("age", 18);
+        context.put("name", "张三");
+
+        SqlRenderResult result = YtoraDslEngine.createDefault().renderSql(template, context);
+        assertEquals("select * from user where name = ? and age >= ? and enabled = ?", result.getSql());
+        assertEquals(Arrays.<Object>asList("张三", 18, Boolean.TRUE), result.getParameters());
+    }
+
+    @Test
+    public void shouldSupportCompiledSqlTemplate() {
+        CompiledSqlTemplate template = YtoraDslEngine.createDefault()
+                .compileSql("update user set name = #{name} where id = #{id}");
+
+        Map<String, Object> context = new LinkedHashMap<String, Object>();
+        context.put("id", 7L);
+        context.put("name", "李四");
+
+        SqlRenderResult result = template.render(context);
+        assertEquals("update user set name = ? where id = ?", result.getSql());
+        assertEquals(Arrays.<Object>asList("李四", 7L), result.getParameters());
     }
 }
